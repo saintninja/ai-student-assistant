@@ -1,0 +1,5 @@
+mfua.edu-org.local {
+    tls internal
+    encode gzip
+    reverse_proxy api:8000
+}

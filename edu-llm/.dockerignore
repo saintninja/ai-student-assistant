@@ -1,0 +1,5 @@
+edu-llm/models
+edu-llm/kb
+edu-llm/db
+**/__pycache__
+.env
