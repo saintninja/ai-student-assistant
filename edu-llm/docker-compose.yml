@@ -1,0 +1,43 @@
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data"]
+    depends_on: [api]
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    env_file: .env
+    depends_on: [db, llm-chat, llm-embed]
+    expose: ["8000"]
+
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    env_file: .env
+    shm_size: 512mb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+
+  llm-chat:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    restart: unless-stopped
+    volumes: ["./models:/models:ro"]
+    ulimits: { memlock: -1 }
+    command: >
+      -m /models/qwen2.5-7b-instruct-q4_k_m.gguf
+      --host 0.0.0.0 --port 8080
+      -c 16384 -np 4 -t 12 --mlock
+
+  llm-embed:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    restart: unless-stopped
+    volumes: ["./models:/models:ro"]
+    command: >
+      -m /models/bge-m3-q8_0.gguf --host 0.0.0.0 --port 8080
+      --embedding --pooling cls -c 4096 -b 2048 -ub 2048 -np 2 -t 3
+
+volumes: { pgdata: {}, caddy_data: {} }
